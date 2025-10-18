@@ -23,6 +23,22 @@ export async function apiRequest(
   return res;
 }
 
+export async function formDataRequest(
+  method: string,
+  url: string,
+  formData: FormData,
+): Promise<Response> {
+  const res = await fetch(url, {
+    method,
+    body: formData,
+    credentials: "include",
+    // ❗ Don't set "Content-Type" manually — browser will handle multipart boundaries automatically
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

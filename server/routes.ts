@@ -80,19 +80,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/news/:id", async (req, res, next) => {
     try {
       const newsId = parseInt(req.params.id);
-      
-      // Query the database for this specific news article
-      const article = await storage.getNewsById(newsId);
-      
-      if (!article) {
-        return res.status(404).send("News article not found");
+
+      // Validate ID
+      if (isNaN(newsId)) {
+        return res.status(400).json({ error: "Invalid news ID" });
       }
-      
+
+      // Fetch news article from your storage or DB
+      const article = await storage.getNewsById(newsId);
+      console.log("Fetched article:", article);
+
+      if (!article) {
+        // ❌ Don't use multiple params in send()
+        // ✅ Instead, send JSON or a message
+        return res.status(404).json({
+          error: "News article not found",
+          id: newsId,
+        });
+      }
+
+      // ✅ Return the article
       res.json(article);
     } catch (error) {
+      console.error("Error fetching article:", error);
       next(error);
     }
   });
+
 
   // Disease detection endpoint
   app.post("/api/disease-detect", upload.single("image"), async (req, res, next) => {
@@ -182,22 +196,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Government schemes endpoint
-  app.get("/api/schemes", async (req, res, next) => {
+  import express from "express";
+  import { createServer } from "http";
+  import { storage } from "./storage"; // your DB layer
+  import { gemini } from "./gemini";   // your AI service
+  import { ensureAuthenticated } from "./middleware/auth"; // optional middleware
+
+  const app = express();
+
+  // ✅ API: Get Government Schemes
+  app.get("/api/schemes", ensureAuthenticated, async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      const user = req.user;
+      if (!user) return res.sendStatus(401);
 
-      const profile = await storage.getFarmerProfile(req.user!.id);
-      if (!profile) return res.status(404).send("Farmer profile not found");
+      // ✅ Fetch farmer profile
+      const profile = await storage.getFarmerProfile(user.id);
+      if (!profile) return res.status(404).json({ message: "Farmer profile not found" });
 
-      const language = profile.preferredLanguage;
+      // ✅ Determine language priority
+      const language = req.query.lang || profile.preferredLanguage || "en";
 
-      // Get existing schemes from database
+      // ✅ Fetch from DB
       let schemes = await storage.getGovernmentSchemes(profile.state, language);
 
-      // If no schemes exist, generate with AI
-      if (schemes.length === 0) {
+      // ✅ If no schemes found, generate via AI and store
+      if (!schemes || schemes.length === 0) {
+        console.log(`[AI] Generating new schemes for ${profile.state} (${language})`);
+
         const aiSchemes = await gemini.getGovernmentSchemes(profile.state, language);
 
+        // Store AI-generated results
         for (const scheme of aiSchemes) {
           await storage.createGovernmentScheme({
             state: profile.state,
@@ -211,15 +240,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Re-fetch stored schemes
         schemes = await storage.getGovernmentSchemes(profile.state, language);
       }
 
+      // ✅ Send response
       res.json(schemes);
     } catch (error) {
+      console.error("[ERROR] Failed to fetch schemes:", error);
       next(error);
     }
   });
 
+  // ✅ Optional: Authentication middleware example
+  function ensureAuthenticated(req, res, next) {
+    if (req.isAuthenticated && req.isAuthenticated()) return next();
+    return res.sendStatus(401);
+  }
+
+  // ✅ Create and export HTTP server
   const httpServer = createServer(app);
-  return httpServer;
-}
+  export default httpServer;

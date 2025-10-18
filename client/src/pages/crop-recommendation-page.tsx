@@ -14,7 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
-import { Sprout, Loader2, TrendingUp, IndianRupee, Thermometer } from "lucide-react";
+import {
+  Sprout,
+  Loader2,
+  TrendingUp,
+  IndianRupee,
+  Thermometer,
+} from "lucide-react";
 import { soilTypes, climateTypes } from "@/data/india-locations";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,13 +29,13 @@ export default function CropRecommendationPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     soilType: "",
     climate: "",
     budget: "",
   });
-  
+
   const [recommendations, setRecommendations] = useState<any>(null);
 
   const recommendMutation = useMutation({
@@ -66,11 +72,16 @@ export default function CropRecommendationPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2" data-testid="text-crop-title">
+        <h1
+          className="text-3xl font-display font-bold text-foreground flex items-center gap-2"
+          data-testid="text-crop-title"
+        >
           <Sprout className="h-8 w-8 text-primary" />
           {t("cropRecommendation")}
         </h1>
-        <p className="text-muted-foreground mt-1">Get AI-powered crop suggestions based on your conditions</p>
+        <p className="text-muted-foreground mt-1">
+          Get AI-powered crop suggestions based on your conditions
+        </p>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -90,10 +101,15 @@ export default function CropRecommendationPage() {
                   <Label htmlFor="soil-type">{t("soilType")}</Label>
                   <Select
                     value={formData.soilType}
-                    onValueChange={(value) => setFormData({ ...formData, soilType: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, soilType: value })
+                    }
                     required
                   >
-                    <SelectTrigger id="soil-type" data-testid="select-soil-type">
+                    <SelectTrigger
+                      id="soil-type"
+                      data-testid="select-soil-type"
+                    >
                       <SelectValue placeholder="Select soil type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -110,7 +126,9 @@ export default function CropRecommendationPage() {
                   <Label htmlFor="climate">{t("climate")}</Label>
                   <Select
                     value={formData.climate}
-                    onValueChange={(value) => setFormData({ ...formData, climate: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, climate: value })
+                    }
                     required
                   >
                     <SelectTrigger id="climate" data-testid="select-climate">
@@ -133,7 +151,9 @@ export default function CropRecommendationPage() {
                     type="number"
                     placeholder="Enter budget in rupees"
                     value={formData.budget}
-                    onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, budget: e.target.value })
+                    }
                     required
                     data-testid="input-budget"
                   />
@@ -145,7 +165,9 @@ export default function CropRecommendationPage() {
                   disabled={recommendMutation.isPending}
                   data-testid="button-get-recommendation"
                 >
-                  {recommendMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {recommendMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   {t("getCropRecommendation")}
                 </Button>
               </form>
@@ -172,40 +194,37 @@ export default function CropRecommendationPage() {
               ) : recommendations ? (
                 <div className="space-y-4">
                   {/* Sample recommendations - will be replaced with AI data */}
-                  {[
-                    { name: "Rice", profit: "High", season: "Kharif", suitability: 95 },
-                    { name: "Cotton", profit: "Medium", season: "Kharif", suitability: 88 },
-                    { name: "Wheat", profit: "Medium", season: "Rabi", suitability: 82 },
-                  ].map((crop, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="p-4 bg-muted rounded-lg space-y-2"
-                      data-testid={`crop-recommendation-${index}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
-                          <Sprout className="h-5 w-5 text-primary" />
-                          {crop.name}
-                        </h3>
-                        <span className="text-sm font-mono text-chart-2">
-                          {crop.suitability}% match
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                          <span>Profit: {crop.profit}</span>
+                  {recommendations?.crops &&
+                    recommendations.crops.map((crop: any, index: number) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="p-4 bg-muted rounded-lg space-y-2"
+                        data-testid={`crop-recommendation-${index}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <Sprout className="h-5 w-5 text-primary" />
+                            {crop.name}
+                          </h3>
+                          <span className="text-sm font-mono text-chart-2">
+                            {crop.suitability}% match
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Thermometer className="h-4 w-4 text-muted-foreground" />
-                          <span>Season: {crop.season}</span>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            <span>Profit: {crop.profit}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Thermometer className="h-4 w-4 text-muted-foreground" />
+                            <span>Season: {crop.season}</span>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))}
 
                   <div className="mt-6 p-4 bg-primary/10 rounded-lg">
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
@@ -213,8 +232,9 @@ export default function CropRecommendationPage() {
                       Budget Analysis
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      Based on your budget of ₹{formData.budget}, rice cultivation would provide the best
-                      returns with an estimated profit margin of 40-50%.
+                      Based on your budget of ₹{formData.budget}, rice
+                      cultivation would provide the best returns with an
+                      estimated profit margin of 40-50%.
                     </p>
                   </div>
                 </div>
@@ -222,7 +242,8 @@ export default function CropRecommendationPage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Sprout className="h-16 w-16 text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">
-                    Fill in your farm details to get AI-powered crop recommendations
+                    Fill in your farm details to get AI-powered crop
+                    recommendations
                   </p>
                 </div>
               )}
