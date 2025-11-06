@@ -145,11 +145,11 @@ export default function CropRecommendationPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="budget">{t("budget")}</Label>
+                  <Label htmlFor="area">{t("Area")}</Label>
                   <Input
-                    id="budget"
+                    id="area"
                     type="number"
-                    placeholder="Enter budget in rupees"
+                    placeholder="Enter area in acers"
                     value={formData.budget}
                     onChange={(e) =>
                       setFormData({ ...formData, budget: e.target.value })
@@ -232,7 +232,7 @@ export default function CropRecommendationPage() {
                       Budget Analysis
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      Based on your budget of ₹{formData.budget}, rice
+                      Based on your Area of {formData.budget} acers, rice
                       cultivation would provide the best returns with an
                       estimated profit margin of 40-50%.
                     </p>

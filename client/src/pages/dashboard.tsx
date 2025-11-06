@@ -36,14 +36,16 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard"],
     enabled: !!user,
     queryFn: async () => {
-      const res = await fetch("/api/dashboard");
+      const res = await fetch("/api/dashboard", {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Failed to fetch dashboard data");
       return res.json();
     },
   });
 
-  // ✅ Fallback mock data when API returns nothing
-  const cropHealthData = dashboardData?.cropHealthData || [
+  // ✅ Use API data with fallback mock data
+  const cropHealthData = dashboardData?.cropHealthTrend || [
     { month: "Jan", health: 85 },
     { month: "Feb", health: 88 },
     { month: "Mar", health: 92 },
@@ -52,13 +54,20 @@ export default function Dashboard() {
     { month: "Jun", health: 90 },
   ];
 
-  const marketPricesData = dashboardData?.marketPricesData || [
+  const marketPricesData = dashboardData?.marketPrices || [
     { crop: "Rice", price: 2500 },
     { crop: "Wheat", price: 2100 },
     { crop: "Cotton", price: 5600 },
     { crop: "Maize", price: 1800 },
     { crop: "Sugarcane", price: 3200 },
   ];
+
+  // Extract metric values from API data with fallbacks
+  const cropHealth = dashboardData?.cropHealth ?? 92;
+  const soilMoisture = dashboardData?.soilMoisture ?? 68;
+  const temperature = dashboardData?.temperature ?? 28;
+  const marketPrice = dashboardData?.marketPrice ?? 2500;
+  const weatherCondition = dashboardData?.weatherCondition ?? "Sunny, low rainfall";
 
   // Animation variants
   const container = {
@@ -120,33 +129,34 @@ export default function Dashboard() {
         {[
           {
             title: t("cropHealth"),
-            value: "92%",
+            value: `${cropHealth}%`,
             icon: <Activity className="h-4 w-4 text-muted-foreground" />,
             subtext: (
               <>
                 <TrendingUp className="inline h-3 w-3 mr-1" />
-                +5% from last month
+                {cropHealthData.length > 1 && cropHealthData[0].health > cropHealthData[1].health ? "+" : ""}
+                {cropHealthData.length > 1 ? Math.abs(cropHealthData[0].health - cropHealthData[1].health) : "5"}% from last month
               </>
             ),
             color: "text-chart-2",
           },
           {
             title: "Soil Moisture",
-            value: "68%",
+            value: `${soilMoisture}%`,
             icon: <Droplets className="h-4 w-4 text-muted-foreground" />,
-            subtext: "Optimal range",
+            subtext: soilMoisture > 50 && soilMoisture < 80 ? "Optimal range" : "Needs attention",
             color: "text-chart-1",
           },
           {
             title: t("weatherForecast"),
-            value: "28°C",
+            value: `${temperature}°C`,
             icon: <Sun className="h-4 w-4 text-muted-foreground" />,
-            subtext: "Sunny, low rainfall",
+            subtext: weatherCondition,
             color: "text-chart-3",
           },
           {
             title: t("marketPrices"),
-            value: "₹2,500",
+            value: `₹${marketPrice.toLocaleString()}`,
             icon: <IndianRupee className="h-4 w-4 text-muted-foreground" />,
             subtext: "Average crop price",
             color: "text-chart-4",

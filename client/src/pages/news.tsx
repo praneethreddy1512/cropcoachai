@@ -88,7 +88,7 @@ export default function NewsPage() {
         transition={{ delay: 0.1, duration: 0.5 }}
         className="flex flex-col sm:flex-row gap-4"
       >
-        <Select value={selectedState} onValueChange={setSelectedState}>
+        {/* <Select value={selectedState} onValueChange={setSelectedState}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder={t("selectState")} />
           </SelectTrigger>
@@ -101,7 +101,7 @@ export default function NewsPage() {
             ))}
           </SelectContent>
         </Select>
-
+ */}
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Category" />
@@ -151,11 +151,11 @@ export default function NewsPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {article.description ||
+                    {article.summary ||
                       "No description available for this article."}
                   </p>
                 </CardContent>
-                <CardFooter className="flex gap-2">
+                {/* <CardFooter className="flex gap-2">
                   <Link href={`/news/${article.id || idx}`}>
                     <Button variant="default" size="sm" className="flex-1">
                       {t("viewFullArticle")}
@@ -164,7 +164,7 @@ export default function NewsPage() {
                   <Button variant="outline" size="icon">
                     <Volume2 className="h-4 w-4" />
                   </Button>
-                </CardFooter>
+                </CardFooter> */}
               </Card>
             </motion.div>
           ))}

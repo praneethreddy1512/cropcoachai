@@ -1,4 +1,6 @@
 // Database connection using Neon PostgreSQL - from javascript_database blueprint
+// Load environment variables first
+import './env.js';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";

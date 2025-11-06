@@ -24,11 +24,7 @@ export default function DiseaseDetection() {
 
   const detectMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await formDataRequest(
-        "POST",
-        "/api/disease-detect",
-        formData,
-      );
+      const res = await formDataRequest("POST", "/api/disease-detect", formData);
       return await res.json();
     },
     onSuccess: (data) => {

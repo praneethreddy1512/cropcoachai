@@ -6,9 +6,9 @@ import multer from "multer";
 import * as gemini from "./gemini";
 
 // Configure multer for image uploads
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -19,11 +19,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard", async (req, res, next) => {
     try {
       if (!req.isAuthenticated()) return res.sendStatus(401);
-      
+
       const profile = await storage.getFarmerProfile(req.user!.id);
       if (!profile) return res.status(404).send("Farmer profile not found");
 
-      const dashboardData = await gemini.getDashboardData(profile.state, profile.district);
+      const dashboardData = await gemini.getDashboardData(
+        profile.state,
+        profile.district,
+      );
       res.json(dashboardData);
     } catch (error) {
       next(error);
@@ -33,13 +36,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // News endpoints
   app.get("/api/news", async (req, res, next) => {
     try {
-      const { state, language, category } = req.query;
-      
+      const { state, language, lang, category } = req.query;
+      // Accept both 'lang' and 'language' query parameters for compatibility
+      const languageParam = (language || lang) as string;
+
       // Get existing news from database
       let news = await storage.getNews(
-        state as string, 
-        language as string, 
-        category as string
+        state as string,
+        languageParam,
+        category as string,
       );
 
       // If no news exists, generate some with AI
@@ -54,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const aiNews = await gemini.generateNews(
             userState,
             userLanguage,
-            categories[i % categories.length]
+            categories[i % categories.length],
           );
 
           await storage.createNewsArticle({
@@ -68,7 +73,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        news = await storage.getNews(state as string, language as string, category as string);
+        news = await storage.getNews(
+          state as string,
+          languageParam,
+          category as string,
+        );
       }
 
       res.json(news);
@@ -88,7 +97,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch news article from your storage or DB
       const article = await storage.getNewsById(newsId);
-      console.log("Fetched article:", article);
 
       if (!article) {
         // ❌ Don't use multiple params in send()
@@ -107,33 +115,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // Disease detection endpoint
-  app.post("/api/disease-detect", upload.single("image"), async (req, res, next) => {
-    try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
-      if (!req.file) return res.status(400).send("No image uploaded");
+  app.post(
+    "/api/disease-detect",
+    upload.single("image"),
+    async (req, res, next) => {
+      try {
+        if (!req.isAuthenticated()) return res.sendStatus(401);
+        if (!req.file) return res.status(400).send("No image uploaded");
 
-      const imageBase64 = req.file.buffer.toString("base64");
-      
-      // Use Gemini AI to detect disease
-      const result = await gemini.detectDisease(imageBase64);
+        const imageBase64 = req.file.buffer.toString("base64");
 
-      // Save detection to database
-      const detection = await storage.createDiseaseDetection({
-        userId: req.user!.id,
-        imagePath: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Store reference
-        diseaseName: result.diseaseName,
-        confidence: result.confidence,
-        treatment: result.treatment,
-        aiResponse: result,
-      });
+        // Use Gemini AI to detect disease
+        const result = await gemini.detectDisease(imageBase64);
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  });
+        // Save detection to database
+        const detection = await storage.createDiseaseDetection({
+          userId: req.user!.id,
+          imagePath: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Store reference
+          diseaseName: result.diseaseName,
+          confidence: result.confidence,
+          treatment: result.treatment,
+          aiResponse: result,
+        });
+
+        res.json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   // Crop recommendation endpoint
   app.post("/api/crop-recommend", async (req, res, next) => {
@@ -143,13 +154,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.getFarmerProfile(req.user!.id);
       if (!profile) return res.status(404).send("Farmer profile not found");
 
-      const { soilType, climate, budget } = req.body;
+      const { soilType, climate, budget, area } = req.body;
+      
+      // Validate required fields
+      if (!soilType || !climate) {
+        return res.status(400).json({ error: "soilType and climate are required" });
+      }
+      
+      // Accept both 'budget' and 'area' - if area is provided, use it as budget estimate
+      const budgetParam = budget || (area ? `${area}` : "50000");
 
       // Get AI recommendations
       const recommendations = await gemini.getCropRecommendations({
         soilType,
         climate,
-        budget,
+        budget: budgetParam,
         state: profile.state,
       });
 
@@ -158,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user!.id,
         soilType,
         climate,
-        budget,
+        budget: budgetParam,
         state: profile.state,
         recommendedCrops: recommendations.crops || [],
         reasoning: recommendations.reasoning || "",
@@ -177,15 +196,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { message, language } = req.body;
 
+      // Validate required fields
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const languageParam = language || "en";
+
       // Get AI response
-      const response = await gemini.getChatResponse(message, language);
+      const response = await gemini.getChatResponse(message.trim(), languageParam);
 
       // Save chat to database
       await storage.createChatMessage({
         userId: req.user!.id,
-        message,
+        message: message.trim(),
         response,
-        language,
+        language: languageParam,
         isVoice: false,
       });
 
@@ -196,41 +222,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Government schemes endpoint
-  import express from "express";
-  import { createServer } from "http";
-  import { storage } from "./storage"; // your DB layer
-  import { gemini } from "./gemini";   // your AI service
-  import { ensureAuthenticated } from "./middleware/auth"; // optional middleware
-
-  const app = express();
-
-  // ✅ API: Get Government Schemes
-  app.get("/api/schemes", ensureAuthenticated, async (req, res, next) => {
+  app.get("/api/schemes", async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.sendStatus(401);
+      if (!req.isAuthenticated()) return res.sendStatus(401);
 
-      // ✅ Fetch farmer profile
-      const profile = await storage.getFarmerProfile(user.id);
-      if (!profile) return res.status(404).json({ message: "Farmer profile not found" });
+      const profile = await storage.getFarmerProfile(req.user!.id);
+      if (!profile) return res.status(404).send("Farmer profile not found");
 
-      // ✅ Determine language priority
-      const language = req.query.lang || profile.preferredLanguage || "en";
+      // Accept language from query parameter or use profile's preferred language
+      const { lang, language } = req.query;
+      const languageParam = (language || lang || profile.preferredLanguage) as string;
 
-      // ✅ Fetch from DB
-      let schemes = await storage.getGovernmentSchemes(profile.state, language);
+      // Get existing schemes from database
+      let schemes = await storage.getGovernmentSchemes(profile.state, languageParam);
 
-      // ✅ If no schemes found, generate via AI and store
-      if (!schemes || schemes.length === 0) {
-        console.log(`[AI] Generating new schemes for ${profile.state} (${language})`);
+      // If no schemes exist, generate with AI
+      if (schemes.length === 0) {
+        const aiSchemes = await gemini.getGovernmentSchemes(
+          profile.state,
+          languageParam,
+        );
 
-        const aiSchemes = await gemini.getGovernmentSchemes(profile.state, language);
-
-        // Store AI-generated results
         for (const scheme of aiSchemes) {
           await storage.createGovernmentScheme({
             state: profile.state,
-            language,
+            language: languageParam,
             schemeName: scheme.schemeName,
             description: scheme.description,
             eligibility: scheme.eligibility,
@@ -240,24 +256,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Re-fetch stored schemes
-        schemes = await storage.getGovernmentSchemes(profile.state, language);
+        schemes = await storage.getGovernmentSchemes(profile.state, languageParam);
       }
 
-      // ✅ Send response
       res.json(schemes);
     } catch (error) {
-      console.error("[ERROR] Failed to fetch schemes:", error);
       next(error);
     }
   });
 
-  // ✅ Optional: Authentication middleware example
-  function ensureAuthenticated(req, res, next) {
-    if (req.isAuthenticated && req.isAuthenticated()) return next();
-    return res.sendStatus(401);
-  }
-
-  // ✅ Create and export HTTP server
   const httpServer = createServer(app);
-  export default httpServer;
+  return httpServer;
+}
